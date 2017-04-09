@@ -24,45 +24,70 @@ class App extends React.Component {
     const ds = new ListView.DataSource({rowHasChanged});
 
     this.state = {
-      usersRef: firebase.database().ref('users'),
-      users: ds,
+      userVacationsRef: firebase.database().ref('user-vacations'),
+      userVacations: ds,
       isLoading: true
     }
 
-    this.state.usersRef.on('value', snapshot => {
+    this.state.userVacationsRef.on('value', snapshot => {
       const rawList = snapshot.val();
-      const result = [];
 
-      for (let key in rawList) {
-        if (rawList.hasOwnProperty(key)) {
-          result.push({
-            id: key,
-            name: rawList[key].username
+      let userVacations = [];
+
+      for (let userKey in rawList) {
+        if (rawList.hasOwnProperty(userKey)) {
+          let userName;
+          let dayRanges = [];
+          let rawVacations = rawList[userKey];
+
+          for (let vacationKey in rawVacations) {
+            if (rawVacations.hasOwnProperty(vacationKey)) {
+              if (!userName) {
+                userName = rawList[userKey][vacationKey].employee
+              }
+
+              dayRanges.push(rawList[userKey][vacationKey].daysRange);
+            }
+          }
+
+          userVacations.push({
+            userName,
+            dayRanges
           });
         }
       }
 
       this.setState({
-        users: ds.cloneWithRows(result),
+        userVacations: ds.cloneWithRows(userVacations),
         isLoading: false
       });
     });
   }
 
   renderUser(user) {
+    console.log(user.dayRanges);
     return (
-      <Text style={styles.userListItem}>
-        {user.name}
-      </Text>
+      <View style={styles.userView}>
+        <Text style={styles.userListItem}>
+          {user.userName}:
+        </Text>
+        {user.dayRanges.sort().map(dayRange => {
+          return (
+            <Text style={styles.dayRange} key={dayRange}>
+              {dayRange.replace('-', ' – ')}
+            </Text>
+          );
+        })}
+      </View>
     );
   }
 
   renderUsers() {
     return (
       <View style={styles.usersListContainer}>
-        <Text style={styles.header}>Users:</Text>
+        <Text style={styles.header}>График отпусков</Text>
         <ListView
-          dataSource={this.state.users}
+          dataSource={this.state.userVacations}
           renderRow={this.renderUser}
         />
       </View>
@@ -105,12 +130,24 @@ const styles = StyleSheet.create({
     flex: 1
   },
   header: {
-    fontSize: 20,
-    marginBottom: 8
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20
+  },
+  userView: {
+    marginBottom: 16
   },
   userListItem: {
     fontSize: 16,
-    height: 24
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8
+  },
+  dayRange: {
+    fontSize: 14,
+    marginBottom: 8,
+    marginLeft: 12
   }
 });
 
